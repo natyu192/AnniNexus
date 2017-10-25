@@ -1,0 +1,14 @@
+name: AnniNexus
+main: com.gmail.mckokumin.anninexus.Main
+version: 0.1
+commands:
+  nexus:
+    permission: natyu.nexus
+  nexuscancel:
+    permission: natyu.nexuscancel
+  nexusmsg:
+    permission: natyu.nexusmsg
+  nexusdelete:
+    permission: natyu.nexusdelete
+  nexusreset:
+    permission: natyu.nexusreset
