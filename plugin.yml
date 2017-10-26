@@ -12,3 +12,5 @@ commands:
     permission: natyu.nexusdelete
   nexusreset:
     permission: natyu.nexusreset
+  nexushp:
+    permission: natyu.nexushp

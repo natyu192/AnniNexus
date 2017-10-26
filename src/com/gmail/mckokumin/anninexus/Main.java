@@ -1,7 +1,10 @@
 package com.gmail.mckokumin.anninexus;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
+import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Effect;
@@ -30,8 +33,10 @@ public class Main extends JavaPlugin implements Listener, CommandExecutor {
 	public int nexusZ;
 	public String nexusWorld;
 	public String nexusDamageMessage;
+	public Main instance;
 
 	public void onEnable() {
+		this.instance = this;
 		this.saveDefaultConfig();
 		this.saveConfig();
 		this.getServer().getPluginManager().registerEvents(this, this);
@@ -88,32 +93,23 @@ public class Main extends JavaPlugin implements Listener, CommandExecutor {
 								Bukkit.broadcastMessage(ChatColor.translateAlternateColorCodes('&', nexusDamageMessage));
 							}
 							Location lo = new Location(p.getWorld(), nexusX, nexusY, nexusZ);
+							ParticleEffect.FIREWORKS_SPARK.display(0, 0, 0, 0.5F, 50, bl.clone().add(0.5d, 0.5d, 0.5d), 32);
+							ParticleEffect.LAVA.display(3, 2, 3, 0.5F, 20, bl.clone().add(0.5d, 0.5d, 0.5d), 32);
+							getNexus().getWorld().playSound(lo, Sound.NOTE_PIANO, 32f, 2F);
 							for (Player all : Bukkit.getOnlinePlayers()) {
-								ParticleEffect.FIREWORKS_SPARK.display(0, 0, 0, 0.5F, 50, bl, 32);
-								ParticleEffect.LAVA.display(3, 2, 3, 0.5F, 20, bl, 32);
-								all.playSound(lo, Sound.NOTE_PIANO, 32f, 2F);
 								all.playEffect(lo, Effect.STEP_SOUND, Material.OBSIDIAN.getId());
-								int[] i = { 1, 2, 3, 4, 5 };
-								int result = i[(int) Math.floor(Math.random() * i.length)];
-								if (result == 1) {
-									all.playSound(bl, Sound.ANVIL_LAND, 16f, 0.5f);
-								}
-								if (result == 2) {
-									all.playSound(bl, Sound.ANVIL_LAND, 16f, 0.6f);
-								}
-								if (result == 3) {
-									all.playSound(bl, Sound.ANVIL_LAND, 16f, 0.7f);
-								}
-								if (result == 4) {
-									all.playSound(bl, Sound.ANVIL_LAND, 16f, 0.8f);
-								}
-								if (result == 5) {
-									all.playSound(bl, Sound.ANVIL_LAND, 16f, 0.9f);
-								}
 							}
+							List<Float> floatArray = new ArrayList<>();
+							floatArray.add(0.5f);
+							floatArray.add(0.6f);
+							floatArray.add(0.7f);
+							floatArray.add(0.8f);
+							floatArray.add(0.9f);
+							Collections.shuffle(floatArray);
+							getNexus().getWorld().playSound(bl, Sound.ANVIL_LAND, 16f, floatArray.get(0));
 							lo.getBlock().setType(Material.ENDER_STONE);
 						}
-					}, 6L);
+					}, 5L);
 				}
 				if (hp == 0) {
 					this.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
@@ -123,14 +119,24 @@ public class Main extends JavaPlugin implements Listener, CommandExecutor {
 							p.sendMessage("        §cNexusを破壊しました");
 							p.sendMessage(" ");
 							p.sendMessage("§c§m━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-							event.setCancelled(true);
 							event.getBlock().getLocation().getBlock().setType(Material.BEDROCK);
-							for (Player all : Bukkit.getOnlinePlayers()) {
-								all.playSound(bl, Sound.EXPLODE, 32f, 1);
-								ParticleEffect.EXPLOSION_LARGE.display(2, 2, 2, 0.1F, 30, bl, 32);
-							}
+							getNexus().getWorld().playSound(bl, Sound.EXPLODE, 32f, 1);
+							ParticleEffect.EXPLOSION_LARGE.display(2, 2, 2, 0.1F, 30, bl, 32);
+							Bukkit.getScheduler().runTaskTimer(instance, new Runnable() {
+								int i = 6;
+
+								public void run() {
+									if (i > 0) {
+										i--;
+										ParticleEffect.EXPLOSION_LARGE.display(2, 2, 2, 0.1F, 30, bl, 32);
+									}
+								}
+							}, 5L, 5L);
+							Bukkit.getScheduler().runTaskLater(instance, () -> {
+								resetNexus();
+							}, 100L);
 						}
-					}, 6L);
+					}, 5L);
 				}
 			}
 		}
@@ -183,9 +189,49 @@ public class Main extends JavaPlugin implements Listener, CommandExecutor {
 				sender.sendMessage(ChatColor.RED + "ネクサスを指定していません");
 				return true;
 			}
-			getNexus().getBlock().setType(Material.ENDER_STONE);
-			hp = 75;
+			resetNexus();
 			sender.sendMessage(ChatColor.YELLOW + "ネクサスをリセットしました");
+			break;
+		case "nexushp":
+			if (getNexus() == null) {
+				sender.sendMessage(ChatColor.RED + "ネクサスを指定していません");
+				return true;
+			}
+			if (args.length == 1) {
+				if (StringUtils.isNumeric(args[0])) {
+					int sethp = Integer.valueOf(args[0]);
+					if (sethp > 0) {
+						sender.sendMessage("§aNexusのHPを " + hp + " から " + sethp + " にしました");
+						hp = sethp;
+						getNexus().getBlock().setType(Material.ENDER_STONE);
+					}
+					if (sethp <= 0) {
+						sender.sendMessage("§c§m━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+						sender.sendMessage(" ");
+						sender.sendMessage("        §cNexusを破壊しました");
+						sender.sendMessage(" ");
+						sender.sendMessage("§c§m━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+						getNexus().getBlock().setType(Material.BEDROCK);
+						getNexus().getWorld().playSound(getNexus(), Sound.EXPLODE, 32f, 1);
+						ParticleEffect.EXPLOSION_LARGE.display(2, 2, 2, 0.1F, 30, getNexus(), 32);
+						Bukkit.getScheduler().runTaskTimer(instance, new Runnable() {
+							int i = 3;
+
+							public void run() {
+								if (i > 0) {
+									i--;
+									ParticleEffect.EXPLOSION_LARGE.display(2, 2, 2, 0.1F, 30, getNexus(), 32);
+								}
+							}
+						}, 10L, 10L);
+					}
+				} else {
+					sender.sendMessage("§c数字をいれてください");
+				}
+				return true;
+			}
+			sender.sendMessage("§a/nexushp <hp>");
+			sender.sendMessage("§aCurrent HP: " + hp);
 			break;
 		}
 		return true;
@@ -216,6 +262,36 @@ public class Main extends JavaPlugin implements Listener, CommandExecutor {
 		nexusY = y;
 		nexusZ = z;
 		nexusWorld = world;
+	}
+
+	private void resetNexus() {
+		if (getNexus() == null)
+			return;
+		getNexus().getBlock().setType(Material.ENDER_STONE);
+		hp = 75;
+		Bukkit.getScheduler().runTaskTimerAsynchronously(instance, new Runnable() {
+			int i = 3;
+			double y = -1;
+
+			@SuppressWarnings("deprecation")
+			@Override
+			public void run() {
+				if (i > 0) {
+					for (int i = 0; i < 360; i += 45) {
+						Location loc = getNexus().clone();
+						double addx = 1 * Math.sin(i * (Math.PI / 180));
+						double addz = 1 * Math.cos(i * (Math.PI / 180));
+						loc.add(addx, y, addz);
+						for (Player all : Bukkit.getOnlinePlayers()) {
+							all.playEffect(loc, Effect.STEP_SOUND, Material.OBSIDIAN.getId());
+							all.playEffect(loc, Effect.STEP_SOUND, Material.REDSTONE_BLOCK.getId());
+						}
+					}
+					y++;
+					i--;
+				}
+			}
+		}, 0L, 0L);
 	}
 
 }
